@@ -1,2 +1,2 @@
 # Verdant
-This repository is to store the script for the Verdant-SBU tidal project.
+This repository is to store the scripts for the Verdant-SBU tidal project.
