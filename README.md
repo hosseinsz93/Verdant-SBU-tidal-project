@@ -43,8 +43,8 @@ The scripts in this repository perform the following operations:
 2. Adjust frame rate and output settings in the script as needed
 
 ## Contributors
-- Jonathan Craig - Initial development
-- Hossein Seyedzadeh - Modifications and enhancements
+- Hossein Seyedzadeh
+- Jonathan Craig
 
 ## Last Updated
 April 2025
