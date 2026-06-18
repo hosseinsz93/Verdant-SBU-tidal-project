@@ -182,9 +182,53 @@ def generate_figure4(mainOutputDir, DMY, velSigned_depthAvg, floodSign_depthAvg,
     fig = plt.figure(num=fig_title, figsize=(800.0, 600.0, 'px'))
 
     # Axis 1: Velocity Distribution
+    ax1 = fig.add_subplot(211)
+    ax1.set_axisbelow(True)
+    ax1.hist(flood_stats, bins=20, color='b', alpha=0.7, label='Flood Tide', edgecolor='k')
+    ax1.hist(ebb_stats, bins=20, color="r", alpha=0.7, label="Ebb Tide", edgecolor="k")
 
+    ax1.set_xlim(-1.2, 1.2)
+    ax1.set_xticks([-1, -0.5, 0, 0.5, 1])
+    ax1.set_ylim(0, 800)
+    ax1.set_yticks([0, 200, 400, 600, 800])
+
+    ax1.set_title(f'{siteID} ({DMY[0]} to {DMY[-1]}): Velocity Distribution by Tidal Phase')
+    ax1.set_xlabel("Velocity (m/s)")
+    ax1.set_ylabel("Frequency")
+    ax1.legend(loc="best", frameon=True, edgecolor='k')
+    ax1.grid(True, linestyle="-", color='#E0E0E0', alpha=0.7)
 
     # Axis 2: Flood/Ebb Box Plots
+    ax2 = fig.add_subplot(212)
+    ax2.set_axisbelow(True)
+
+    ebb_magnitudes = np.abs(ebb_stats)
+    box_data = [flood_stats, ebb_magnitudes]
+
+    box_props = dict(linestyle="-", linewidth=0.8, color="b")
+    whisker_props = dict(linestyle="--", linewidth=0.8, color="k")
+    capprops = dict(linestyle="-", linewidth=0.8, color="k")
+    median_props = dict(linestyle="-", linewidth=0.8, color="r")
+
+    ax2.boxplot(box_data, whis=1.5, boxprops=box_props, whiskerprops=whisker_props, capprops=capprops,
+                medianprops=median_props, widths=0.25)
+
+    ax2.set_xticks([1, 2])
+    ax2.set_xticklabels(['Flood', 'Ebb'])
+
+    ax2.set_ylim(-0.5, 1.3)
+    ax2.set_yticks([-0.5, 0, 0.5, 1])
+
+    ax2.set_title(f"{siteID} ({DMY[0]} to {DMY[-1]}): Statistical Comparison of Flood and Ebb Magnitudes")
+    ax2.set_ylabel("Velocity Magnitude (m/s)")
+    ax2.grid(True, linestyle="-", color='#E0E0E0', alpha=0.7)
+
+    # Tight layout prevents subplots and titles from overlapping
+    plt.tight_layout()
+
+    plt.savefig(Path(mainOutputDir) / "_Statistics.png", bbox_inches="tight")
+    plt.close(fig)
+    print("fig4 (_Statistics.png) generated.")
 
 
 
