@@ -31,15 +31,18 @@ def flowVisualized(mainOutputDir, DMY, velSigned_depthAvg, velDir_depthAvg, floo
 # Figure 1: Summary of Info about Tidal Flow (_FlowSummary.png)
 def generate_figure1(mainOutputDir, DMY, floodVelMag_depthtimeAvg, ebbVelMag_depthtimeAvg, floodMeanDir, ebbMeanDir,
                      siteID):
-    fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}"
+    fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]})"
     fig = plt.figure(num=fig_title, figsize=(1000.0, 450.0, 'px'))
 
     # Axis 1: Bar Chart
     ax_bar = fig.add_axes((0.1, 0.15, 0.35, 0.7))
-    ax_bar.bar(['Flood', 'Ebb'], [floodVelMag_depthtimeAvg, ebbVelMag_depthtimeAvg])
+    ax_bar.bar(['Flood', 'Ebb'], [floodVelMag_depthtimeAvg, ebbVelMag_depthtimeAvg], edgecolor='k', width=0.6)
     ax_bar.set_ylabel('Average Magnitude (m/s)')
-    ax_bar.set_title(fig_title)
-    ax_bar.grid(True, linestyle='-', alpha=0.5)
+    ax_bar.set_title(fig_title, fontweight='bold', fontsize=11)
+    ax_bar.set_ylim(0, 0.6)
+    ax_bar.set_axisbelow(True)
+    ax_bar.grid(True, linestyle='-', color='#E0E0E0', alpha=0.7)
+
 
     # Axis 2: Polar Plot
     ax_polar = fig.add_axes((0.55, 0.1, 0.4, 0.8), polar=True)
@@ -49,21 +52,26 @@ def generate_figure1(mainOutputDir, DMY, floodVelMag_depthtimeAvg, ebbVelMag_dep
     floodRad = np.radians(floodMeanDir)
     ebbRad = np.radians(ebbMeanDir)
 
-    line1, = ax_polar.plot([0, floodRad], [0, floodVelMag_depthtimeAvg], linewidth=2, color=[0.2, 0.4, 0.9])
-    line2, = ax_polar.plot([0, ebbRad], [0, ebbVelMag_depthtimeAvg], linewidth=2, color=[0.9, 0.2, 0.2])
+    line1, = ax_polar.plot([0, floodRad], [0, floodVelMag_depthtimeAvg], linewidth=2, color=[0.2, 0.4, 0.9],
+                           label='Flood')
+    line2, = ax_polar.plot([0, ebbRad], [0, ebbVelMag_depthtimeAvg], linewidth=2, color=[0.9, 0.2, 0.2],
+                           label='Ebb')
 
     ax_polar.scatter(floodRad, floodVelMag_depthtimeAvg, s=70, color=[0.2, 0.4, 0.9], zorder=3)
     ax_polar.scatter(ebbRad, ebbVelMag_depthtimeAvg, s=70, color=[0.9, 0.2, 0.2])
 
     ax_polar.set_thetagrids(np.arange(0, 360, 45), ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'])
-
-    ax_polar.text(floodRad, floodVelMag_depthtimeAvg * 1.15, f'{floodMeanDir:.1f}\u00b0 T',
-                  color=[0.2, 0.4, 0.9], weight='bold', ha='center', va='center')
-    ax_polar.text(ebbRad, ebbVelMag_depthtimeAvg * 1.15, f"{ebbMeanDir:.1f}\u00b0 T",
-                  color=[0.9, 0.2, 0.2], weight='bold', ha='center', va='center')
-
-    ax_polar.set_title(f'{siteID} ({DMY[0]} to {DMY[-1]}):\nDominant Current Directions (True North)', pad=20)
-    ax_polar.legend(handles=[line1, line2], loc='upper center', bbox_to_anchor=(0.5, -0.15), ncol=2)
+    ax_polar.set_rlim(0, 0.6)
+    ax_polar.set_rticks([0.2, 0.4, 0.6])
+    ax_polar.set_rlabel_position(0)
+    ax_polar.grid(True, linestyle='-', color='#E0E0E0', alpha=0.7)
+    ax_polar.text(floodRad-0.06, floodVelMag_depthtimeAvg-0.07, f'{floodMeanDir:.1f}\u00b0 T', color=[0.2, 0.4, 0.9],
+                  weight='bold', ha='right')
+    ax_polar.text(ebbRad+0.03, ebbVelMag_depthtimeAvg-0.07, f"{ebbMeanDir:.1f}\u00b0 T", color=[0.9, 0.2, 0.2],
+                  weight='bold', ha='left')
+    ax_polar.set_title(f'{siteID} ({DMY[0]} to {DMY[-1]}):\nDominant Current Directions (True North)', pad=20,
+                       fontweight='bold')
+    ax_polar.legend(loc='upper center', bbox_to_anchor=(0.5, -0.07), ncol=1, frameon=True, edgecolor='k')
 
     plt.savefig(Path(mainOutputDir) / '_FlowSummary.png', bbox_inches='tight')
     plt.close(fig)
