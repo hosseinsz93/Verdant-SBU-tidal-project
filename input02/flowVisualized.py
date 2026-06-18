@@ -1,4 +1,6 @@
 from pathlib import Path
+from typing import Any, Union
+from collections.abc import Sequence
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import dates as mdates
@@ -9,20 +11,20 @@ import pandas as pd
 
 
 def flowVisualized(
-    mainOutputDir,
-    DMY,
-    velSigned_depthAvg,
-    velDir_depthAvg,
-    floodSign_depthAvg,
-    ebbSign_depthAvg,
-    Eas_depthAvg,
-    Nor_depthAvg,
-    floodVelMag_depthtimeAvg,
-    ebbVelMag_depthtimeAvg,
-    floodMeanDir,
-    ebbMeanDir,
-    siteID,
-):
+    mainOutputDir: Union[str, Path],
+    DMY: Sequence[str],
+    velSigned_depthAvg: np.ndarray,
+    velDir_depthAvg: np.ndarray,
+    floodSign_depthAvg: np.ndarray,
+    ebbSign_depthAvg: np.ndarray,
+    Eas_depthAvg: np.ndarray,
+    Nor_depthAvg: np.ndarray,
+    floodVelMag_depthtimeAvg: float | int,
+    ebbVelMag_depthtimeAvg: float | int,
+    floodMeanDir: float | int,
+    ebbMeanDir: float | int,
+    siteID: str,
+) -> None:
 
     # Check whether output folder exists
     if not Path(mainOutputDir).is_dir():
@@ -71,10 +73,10 @@ def flowVisualized(
     )
 
 
-def calculate_midnight_ticks(DMY, freq="7D"):
+def calculate_midnight_ticks(DMY: Any, freq: str = "7D") -> pd.DatetimeIndex:
     """
     Generates tick dates fixed at 00:00 (midnight) from a list/numpy array of date strings (DMY).
-    Ensures the first tick starts beore or at the date start, and the last tick extends past the data end.
+    Ensures the first tick starts before or at the date start, and the last tick extends past the data end.
     """
     dmy_datetime = pd.to_datetime(DMY)
 
@@ -84,25 +86,24 @@ def calculate_midnight_ticks(DMY, freq="7D"):
     tick_dates = pd.date_range(start=start_date, end=end_date, freq=freq)
 
     if tick_dates[-1] < end_date:
-        tick_dates = tick_dates.append(
-            pd.DatetimeIndex(tick_dates[-1]) + pd.Timedelta(freq)
-        )
+        next_tick = tick_dates[-1] + pd.Timedelta(freq)
+        tick_dates = pd.DatetimeIndex(tick_dates.append(pd.DatetimeIndex([next_tick])))
 
     return tick_dates
 
 
 # Figure 1: Summary of Info about Tidal Flow (_FlowSummary.png)
 def generate_figure1(
-    mainOutputDir,
-    DMY,
-    floodVelMag_depthtimeAvg,
-    ebbVelMag_depthtimeAvg,
-    floodMeanDir,
-    ebbMeanDir,
-    siteID,
-):
+    mainOutputDir: Union[str, Path],
+    DMY: Sequence[str],
+    floodVelMag_depthtimeAvg: float | int,
+    ebbVelMag_depthtimeAvg: float | int,
+    floodMeanDir: float | int,
+    ebbMeanDir: float | int,
+    siteID: str,
+) -> None:
     fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]})"
-    fig = plt.figure(num=fig_title, figsize=(1000.0, 450.0, "px"))
+    fig = plt.figure(num=fig_title, figsize=(1000.0, 450.0, "px"))  # type: ignore
 
     # Axis 1: Bar Chart
     ax_bar = fig.add_axes((0.1, 0.15, 0.35, 0.7))
@@ -120,8 +121,8 @@ def generate_figure1(
 
     # Axis 2: Polar Plot
     ax_polar = fig.add_axes((0.55, 0.1, 0.4, 0.8), polar=True)
-    ax_polar.set_theta_zero_location("N")
-    ax_polar.set_theta_direction(-1)
+    ax_polar.set_theta_zero_location("N")  # type: ignore
+    ax_polar.set_theta_direction(-1)  # type: ignore
 
     floodRad = np.radians(floodMeanDir)
     ebbRad = np.radians(ebbMeanDir)
@@ -146,12 +147,12 @@ def generate_figure1(
     )
     ax_polar.scatter(ebbRad, ebbVelMag_depthtimeAvg, s=70, color=[0.9, 0.2, 0.2])
 
-    ax_polar.set_thetagrids(
-        np.arange(0, 360, 45), ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
-    )
-    ax_polar.set_rlim(0, 0.6)
-    ax_polar.set_rticks([0.2, 0.4, 0.6])
-    ax_polar.set_rlabel_position(0)
+    ax_polar.set_xticks(np.radians(np.arange(0, 360, 45)))
+    ax_polar.set_xticklabels(["N", "NE", "E", "SE", "S", "SW", "W", "NW"])
+
+    ax_polar.set_rlim(0, 0.6)  # type: ignore
+    ax_polar.set_rticks([0.2, 0.4, 0.6])  # type: ignore
+    ax_polar.set_rlabel_position(0)  # type: ignore
     ax_polar.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7)
     ax_polar.text(
         floodRad - 0.06,
@@ -189,13 +190,18 @@ def generate_figure1(
 
 # Figure 2: Time Series (_TimeSeries.png)
 def generate_figure2(
-    mainOutputDir, DMY, velSigned_depthAvg, floodSign_depthAvg, ebbSign_depthAvg, siteID
-):
+    mainOutputDir: Union[str, Path],
+    DMY: Sequence[str],
+    velSigned_depthAvg: np.ndarray,
+    floodSign_depthAvg: np.ndarray,
+    ebbSign_depthAvg: np.ndarray,
+    siteID: str,
+) -> None:
     dmy_arr = pd.to_datetime(np.array(DMY)).to_numpy()
     vel_arr = np.array(velSigned_depthAvg)
 
     fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}):\nTidal Flow Analysis: Flood (+) and Ebb (-) Tides"
-    fig = plt.figure(num=fig_title, figsize=(1200.0, 600.0, "px"))
+    fig = plt.figure(num=fig_title, figsize=(1200.0, 600.0, "px"))  # type: ignore
 
     ax = fig.add_subplot(111)
 
@@ -242,13 +248,19 @@ def generate_figure2(
 
 
 # Figure 3: Velocity Components (_Componenets.png)
-def generate_figure3(mainOutputDir, DMY, Eas_depthAvg, Nor_depthAvg, siteID):
+def generate_figure3(
+    mainOutputDir: Union[str, Path],
+    DMY: Sequence[str],
+    Eas_depthAvg: np.ndarray,
+    Nor_depthAvg: np.ndarray,
+    siteID: str,
+) -> None:
     dmy_arr = pd.to_datetime(np.array(DMY)).to_numpy()
     east_arr = np.array(Eas_depthAvg)
     north_arr = np.array(Nor_depthAvg)
 
     fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}): Velocity Components"
-    fig = plt.figure(num=fig_title, figsize=(1200.0, 400.0, "px"))
+    fig = plt.figure(num=fig_title, figsize=(1200.0, 400.0, "px"))  # type: ignore
 
     ax = fig.add_subplot(111)
 
@@ -273,19 +285,24 @@ def generate_figure3(mainOutputDir, DMY, Eas_depthAvg, Nor_depthAvg, siteID):
 
     plt.savefig(Path(mainOutputDir) / "_Components.png", bbox_inches="tight")
     plt.close(fig)
-    print("fig3 (_Components) generated.")
+    print("fig3 (_Components.png) generated.")
 
 
 # Figure 4: Statistical Analysis (_Statistics.png)
 def generate_figure4(
-    mainOutputDir, DMY, velSigned_depthAvg, floodSign_depthAvg, ebbSign_depthAvg, siteID
-):
+    mainOutputDir: Union[str, Path],
+    DMY: Sequence[str],
+    velSigned_depthAvg: np.ndarray,
+    floodSign_depthAvg: np.ndarray,
+    ebbSign_depthAvg: np.ndarray,
+    siteID: str,
+) -> None:
     vel_arr = np.array(velSigned_depthAvg)
     flood_stats = vel_arr[floodSign_depthAvg]
     ebb_stats = vel_arr[ebbSign_depthAvg]
 
     fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}): Statistical Analysis"
-    fig = plt.figure(num=fig_title, figsize=(800.0, 600.0, "px"))
+    fig = plt.figure(num=fig_title, figsize=(800.0, 600.0, "px"))  # type: ignore
 
     # Axis 1: Velocity Distribution
     ax1 = fig.add_subplot(211)
@@ -351,14 +368,25 @@ def generate_figure4(
 
 
 # Figure 5: Current Rose
-def generate_figure5(mainOutputDir, DMY, velSigned_depthAvg, velDir_depthAvg, SiteID):
+def generate_figure5(
+    mainOutputDir: Union[str, Path],
+    DMY: Sequence[str],
+    velSigned_depthAvg: np.ndarray,
+    velDir_depthAvg: np.ndarray,
+    SiteID: str,
+) -> None:
     pass
 
 
 # Figure 6: Tidal Cycles
 def generate_figure6(
-    mainOutputDir, DMY, velSigned_depthAvg, floodSign_depthAvg, ebbSign_depthAvg, SiteID
-):
+    mainOutputDir: Union[str, Path],
+    DMY: Sequence[str],
+    velSigned_depthAvg: np.ndarray,
+    floodSign_depthAvg: np.ndarray,
+    ebbSign_depthAvg: np.ndarray,
+    SiteID: str,
+) -> None:
     pass
 
 
