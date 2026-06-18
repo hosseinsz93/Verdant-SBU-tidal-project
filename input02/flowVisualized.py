@@ -29,6 +29,24 @@ def flowVisualized(mainOutputDir, DMY, velSigned_depthAvg, velDir_depthAvg, floo
     generate_figure6(mainOutputDir, DMY, velSigned_depthAvg, floodSign_depthAvg, ebbSign_depthAvg, siteID)
 
 
+def calculate_midnight_ticks(DMY, freq='7D'):
+    """
+    Generates tick dates fixed at 00:00 (midnight) from a list/numpy array of date strings (DMY).
+    Ensures the first tick starts beore or at the date start, and the last tick extends past the data end.
+    """
+    dmy_datetime = pd.to_datetime(DMY)
+
+    start_date = dmy_datetime.min().floor('D')
+    end_date = dmy_datetime.max().ceil('D')
+
+    tick_dates = pd.date_range(start=start_date, end=end_date, freq=freq)
+
+    if tick_dates[-1] < end_date:
+        tick_dates = tick_dates.append(pd.DatetimeIndex(tick_dates[-1]) + pd.Timedelta(freq))
+
+    return tick_dates
+
+
 # Figure 1: Summary of Info about Tidal Flow (_FlowSummary.png)
 def generate_figure1(mainOutputDir, DMY, floodVelMag_depthtimeAvg, ebbVelMag_depthtimeAvg, floodMeanDir, ebbMeanDir,
                      siteID):
@@ -98,10 +116,9 @@ def generate_figure2(mainOutputDir, DMY, velSigned_depthAvg, floodSign_depthAvg,
     ax.set_ylabel('Velocity (m/s)')
     ax.set_title(fig_title, pad=15, fontweight='bold')
 
-    dynamic_start = dmy_arr.min()
-    dynamic_end = dmy_arr.max()
+    tick_dates = calculate_midnight_ticks(DMY, freq='7D')
 
-    tick_dates = pd.date_range(start=dynamic_start, end=dynamic_end, freq='7D')
+    ax.set_xlim(tick_dates[0], tick_dates[-1])
 
     ax.xaxis.set_major_locator(FixedLocator(mdates.date2num(tick_dates)))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d %H:%M'))
