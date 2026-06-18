@@ -2,6 +2,7 @@ from pathlib import Path
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import dates as mdates
+from matplotlib.ticker import FixedLocator
 from matio import load_from_mat
 import warnings
 import pandas as pd
@@ -83,29 +84,36 @@ def generate_figure2(mainOutputDir, DMY, velSigned_depthAvg, floodSign_depthAvg,
     dmy_arr = pd.to_datetime(np.array(DMY)).to_numpy()
     vel_arr = np.array(velSigned_depthAvg)
 
-    fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}: Time Series"
+    fig_title = f'{siteID} ({DMY[0]} to {DMY[-1]}):\nTidal Flow Analysis: Flood (+) and Ebb (-) Tides'
     fig = plt.figure(num=fig_title, figsize=(1200.0, 600.0, 'px'))
 
     ax = fig.add_subplot(111)
 
-    ax.plot(dmy_arr, vel_arr, 'k', linewidth=1, label='Velocity')
+    ax.plot(dmy_arr, vel_arr, 'k', linewidth=0.5, label='Velocity')
 
     ax.plot(dmy_arr[floodSign_depthAvg], vel_arr[floodSign_depthAvg], 'b.', markersize=4, label='Flood Tide')
     ax.plot(dmy_arr[ebbSign_depthAvg], vel_arr[ebbSign_depthAvg], 'r.', markersize=4, label='Ebb Tide')
 
     ax.set_xlabel('Time')
     ax.set_ylabel('Velocity (m/s)')
-    ax.set_title(f'{siteID} ({DMY[0]} to {DMY[-1]}):\nTidal Flow Analysis: Flood (+) and Ebb (-) Tides', pad=15,
-                 fontweight='bold')
+    ax.set_title(fig_title, pad=15, fontweight='bold')
 
-    ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+    dynamic_start = dmy_arr.min()
+    dynamic_end = dmy_arr.max()
+
+    tick_dates = pd.date_range(start=dynamic_start, end=dynamic_end, freq='7D')
+
+    ax.xaxis.set_major_locator(FixedLocator(mdates.date2num(tick_dates)))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d %H:%M'))
 
     ax.minorticks_off()
-    fig.autofmt_xdate()
+    plt.setp(ax.get_xticklabels(), rotation=0, ha='center')
 
-    ax.legend(loc='best')
-    ax.grid(True, linestyle='-', alpha=0.5)
+    ax.set_ylim(-1.5, 1.5)
+    ax.set_yticks([-1.5, -1, -0.5, 0, 0.5, 1, 1.5])
+
+    ax.legend(loc='upper right', frameon=True, edgecolor='k')
+    ax.grid(True, linestyle='-', color='#E0E0E0', alpha=0.7)
 
     plt.savefig(Path(mainOutputDir) / '_TimeSeries.png', bbox_inches='tight')
     plt.close(fig)
