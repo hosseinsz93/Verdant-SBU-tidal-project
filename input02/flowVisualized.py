@@ -143,7 +143,7 @@ def generate_figure3(mainOutputDir, DMY, Eas_depthAvg, Nor_depthAvg, siteID):
     east_arr = np.array(Eas_depthAvg)
     north_arr = np.array(Nor_depthAvg)
 
-    fig_title = f'{siteID} ({DMY[0]} to {DMY[-1]}: Velocity Components'
+    fig_title = f'{siteID} ({DMY[0]} to {DMY[-1]}): Velocity Components'
     fig = plt.figure(num=fig_title, figsize=(1200.0, 400.0, 'px'))
 
     ax = fig.add_subplot(111)
@@ -155,14 +155,17 @@ def generate_figure3(mainOutputDir, DMY, Eas_depthAvg, Nor_depthAvg, siteID):
     ax.set_ylabel('Velocity (m/s)')
     ax.set_title(fig_title, pad=15, fontweight='bold')
 
-    ax.xaxis.set_major_locator(mdates.WeekdayLocator(interval=1))
+    tick_dates = calculate_midnight_ticks(DMY, freq='7D')
+
+    ax.set_xlim(tick_dates[0], tick_dates[-1])
+
+    ax.xaxis.set_major_locator(FixedLocator(mdates.date2num(tick_dates)))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d %H:%M'))
 
     ax.minorticks_off()
-    fig.autofmt_xdate()
 
-    ax.legend(loc='best')
-    ax.grid(True, linestyle='-', alpha=0.5)
+    ax.legend(loc='upper right', frameon=True, edgecolor='k')
+    ax.grid(True, linestyle='-', color='#E0E0E0', alpha=0.7)
 
     plt.savefig(Path(mainOutputDir) / '_Components.png', bbox_inches='tight')
     plt.close(fig)
