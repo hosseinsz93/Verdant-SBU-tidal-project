@@ -398,7 +398,7 @@ def generate_figure5(
     magnitudes = np.abs(np.array(velSigned_depthAvg))
 
     n_dir_bins = 36
-    n_speed_bands = 100
+    n_speed_bands = 100 # Sets plot gradient density
 
     dir_edges = np.linspace(0, 360, n_dir_bins + 1)
     dir_centers_rad = np.radians(0.5 * (dir_edges[:-1] + dir_edges[1:]))
@@ -418,11 +418,11 @@ def generate_figure5(
 
     date_label = _dmy_label(DMY)
     fig_title = f"{siteID} {date_label}: Tidal Current Rose"
-    fig = plt.figure(num=fig_title, figsize=(7.0, 6.0), dpi=100)
+    fig = plt.figure(num=fig_title, figsize=(700.0, 600.0, "px")) # type: ignore
 
     ax = fig.add_subplot(111, polar=True)
-    ax.set_theta_zero_location("N")
-    ax.set_theta_direction(-1)
+    ax.set_theta_zero_location("N") # type: ignore
+    ax.set_theta_direction(-1) # type: ignore
     ax.set_axisbelow(True)
 
     bottoms_matrix = np.vstack((np.zeros(n_dir_bins), np.cumsum(counts, axis=0)[:-1]))
