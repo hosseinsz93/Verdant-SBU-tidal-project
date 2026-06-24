@@ -394,17 +394,17 @@ def generate_figure5(
     velDir_depthAvg: np.ndarray,
     siteID: str,
 ) -> None:
-    directions_deg = np.array(velDir_depthAvg)
-    magnitudes = np.abs(np.array(velSigned_depthAvg))
-
+    directions_rad = np.radians(np.array(velDir_depthAvg))
+    magnitudes = np.abs(np.array(velSigned_depthAvg)) # Makes sure the NE graph is present. Bug from original matlab code.
+    
     n_dir_bins = 36
-    n_speed_bands = 100 # Sets plot gradient density
+    n_speed_bands = 100  # Sets plot gradient density (original matlab code had 4)
 
-    dir_edges = np.linspace(0, 360, n_dir_bins + 1)
-    dir_centers_rad = np.radians(0.5 * (dir_edges[:-1] + dir_edges[1:]))
+    edges = np.linspace(0, 2 * np.pi, n_dir_bins + 1)
+    dir_centers_rad = 0.5 * (edges[:-1] + edges[1:])
     bar_width = 2 * np.pi / n_dir_bins
 
-    speed_max = magnitudes.max()
+    speed_max = magnitudes.max() * 1.1
     magnitude_edges = np.linspace(0, speed_max, n_speed_bands + 1)
 
     cmap = plt.colormaps["jet"]
@@ -412,28 +412,29 @@ def generate_figure5(
 
     # Vectorized 2D binning
     counts, _, _ = np.histogram2d(
-        directions_deg, magnitudes, bins=[dir_edges, magnitude_edges]
+        np.degrees(directions_rad), magnitudes,
+        bins=[np.degrees(edges), magnitude_edges]
     )
     counts = counts.T
 
     date_label = _dmy_label(DMY)
     fig_title = f"{siteID} {date_label}: Tidal Current Rose"
-    fig = plt.figure(num=fig_title, figsize=(700.0, 600.0, "px")) # type: ignore
+    fig = plt.figure(num=fig_title, figsize=(700.0, 600.0, "px"))  # type: ignore
 
     ax = fig.add_subplot(111, polar=True)
-    ax.set_theta_zero_location("N") # type: ignore
-    ax.set_theta_direction(-1) # type: ignore
+    ax.set_theta_zero_location("N")   # type: ignore
+    ax.set_theta_direction(-1)        # type: ignore
     ax.set_axisbelow(True)
 
     bottoms_matrix = np.vstack((np.zeros(n_dir_bins), np.cumsum(counts, axis=0)[:-1]))
 
-    for s in range(n_speed_bands):
+    for i in range(n_speed_bands):
         ax.bar(
             dir_centers_rad,
-            counts[s],
+            counts[i],
             width=bar_width,
-            bottom=bottoms_matrix[s],
-            color=colors[s],
+            bottom=bottoms_matrix[i],
+            color=colors[i],
             edgecolor="none",
             align="center",
             antialiased=False,
@@ -460,12 +461,13 @@ def generate_figure5(
 
     sm = plt.cm.ScalarMappable(cmap="jet", norm=plt.Normalize(vmin=0, vmax=speed_max))
     sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, pad=0.1, shrink=0.7)
-    cbar_ticks = np.linspace(0, speed_max, 5)
-    cbar.set_ticks(cbar_ticks)
-    cbar.set_ticklabels([f"{v:.1f}" for v in cbar_ticks])
-    cbar.set_label("Current Speed (m/s)")
-    cbar.outline.set_visible(False)
+    c = fig.colorbar(sm, ax=ax, pad=0.1, shrink=0.7)
+
+    cbar_tick_values = np.linspace(0, speed_max, 5)
+    c.set_ticks(cbar_tick_values)
+    c.set_ticklabels([f"{v:.1f}" for v in cbar_tick_values])
+    c.set_label("Current Speed (m/s)")
+    c.outline.set_visible(False) # type: ignore
 
     plt.savefig(Path(mainOutputDir) / "_CurrentRose.png", bbox_inches="tight")
     plt.close(fig)
