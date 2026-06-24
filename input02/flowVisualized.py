@@ -421,7 +421,6 @@ def generate_figure5(
             zorder=3,
         )
 
-
     ax.set_xticks(np.radians(np.arange(0, 360, 45)))
     ax.set_xticklabels(
         ["N", "NE", "E", "SE", "S", "SW", "W", "NW"], fontweight="bold", color="#333333"
@@ -447,9 +446,7 @@ def generate_figure5(
     cbar.set_ticks(cbar_ticks)
     cbar.set_ticklabels([f"{v:.1f}" for v in cbar_ticks])
     cbar.set_label("Current Speed (m/s)")
-    cbar.outline.set_visible(
-        False
-    )
+    cbar.outline.set_visible(False)
 
     plt.savefig(Path(mainOutputDir) / "_CurrentRose.png", bbox_inches="tight")
     plt.close(fig)
