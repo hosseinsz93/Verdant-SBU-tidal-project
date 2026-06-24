@@ -367,27 +367,178 @@ def generate_figure4(
     print("fig4 (_Statistics.png) generated.")
 
 
-# Figure 5: Current Rose
+# Figure 5: Current Rose (_CurrentRose.png)
 def generate_figure5(
     mainOutputDir: Union[str, Path],
     DMY: Sequence[str],
     velSigned_depthAvg: np.ndarray,
     velDir_depthAvg: np.ndarray,
-    SiteID: str,
+    siteID: str,
 ) -> None:
-    pass
+    directions_deg = np.array(velDir_depthAvg)
+    magnitudes = np.abs(np.array(velSigned_depthAvg))
+
+    n_dir_bins = 36
+    n_speed_bands = 100
+
+    dir_edges = np.linspace(0, 360, n_dir_bins + 1)
+    dir_centers_rad = np.radians(0.5 * (dir_edges[:-1] + dir_edges[1:]))
+    bar_width = 2 * np.pi / n_dir_bins
+
+    speed_max = magnitudes.max()
+    magnitude_edges = np.linspace(0, speed_max, n_speed_bands + 1)
+
+    cmap = plt.colormaps["jet"]
+    colors = cmap(np.linspace(0, 1, n_speed_bands))
+
+    # Vectorized 2D binning
+    counts, _, _ = np.histogram2d(
+        directions_deg, magnitudes, bins=[dir_edges, magnitude_edges]
+    )
+    counts = counts.T
+
+    fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}): Tidal Current Rose"
+    fig = plt.figure(num=fig_title, figsize=(7.0, 6.0), dpi=100)
+
+    ax = fig.add_subplot(111, polar=True)
+    ax.set_theta_zero_location("N")
+    ax.set_theta_direction(-1)
+
+    ax.set_axisbelow(True)
+
+    bottoms_matrix = np.vstack((np.zeros(n_dir_bins), np.cumsum(counts, axis=0)[:-1]))
+
+    for s in range(n_speed_bands):
+        ax.bar(
+            dir_centers_rad,
+            counts[s],
+            width=bar_width,
+            bottom=bottoms_matrix[s],
+            color=colors[s],
+            edgecolor="none",
+            align="center",
+            antialiased=False,
+            zorder=3,
+        )
 
 
-# Figure 6: Tidal Cycles
+    ax.set_xticks(np.radians(np.arange(0, 360, 45)))
+    ax.set_xticklabels(
+        ["N", "NE", "E", "SE", "S", "SW", "W", "NW"], fontweight="bold", color="#333333"
+    )
+    ax.tick_params(axis="x", pad=10)
+
+    ax.set_rlabel_position(22.5)
+    ax.tick_params(axis="y", labelsize=8)
+
+    ax.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7, zorder=1)
+
+    ax.set_title(
+        f"{siteID} ({DMY[0]} to {DMY[-1]}): Current Rose (True North)",
+        pad=20,
+        fontweight="bold",
+        color="#222222",
+    )
+
+    sm = plt.cm.ScalarMappable(cmap="jet", norm=plt.Normalize(vmin=0, vmax=speed_max))
+    sm.set_array([])
+    cbar = fig.colorbar(sm, ax=ax, pad=0.1, shrink=0.7)
+    cbar_ticks = np.linspace(0, speed_max, 5)
+    cbar.set_ticks(cbar_ticks)
+    cbar.set_ticklabels([f"{v:.1f}" for v in cbar_ticks])
+    cbar.set_label("Current Speed (m/s)")
+    cbar.outline.set_visible(
+        False
+    )
+
+    plt.savefig(Path(mainOutputDir) / "_CurrentRose.png", bbox_inches="tight")
+    plt.close(fig)
+    print("fig5 (_CurrentRose.png) generated.")
+
+
+# Figure 6: Tidal Cycles (_TidalCycles.png)
 def generate_figure6(
     mainOutputDir: Union[str, Path],
     DMY: Sequence[str],
     velSigned_depthAvg: np.ndarray,
     floodSign_depthAvg: np.ndarray,
     ebbSign_depthAvg: np.ndarray,
-    SiteID: str,
+    siteID: str,
 ) -> None:
-    pass
+    dmy_arr = pd.to_datetime(np.array(DMY)).to_numpy()
+    vel_arr = np.array(velSigned_depthAvg)
+
+    fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}): Tidal Cycles"
+
+    fig = plt.figure(num=fig_title, figsize=(1200.0, 700.0, "px"))  # type: ignore
+
+    # First axis: signed velocity time series with flood/ebb overlay
+    ax1 = fig.add_subplot(211)
+    ax1.set_axisbelow(True)
+    ax1.plot(dmy_arr, vel_arr, "k-", linewidth=0.5, label="Velocity")
+    ax1.plot(
+        dmy_arr[floodSign_depthAvg],
+        vel_arr[floodSign_depthAvg],
+        "b.",
+        markersize=4,
+        label="Flood",
+    )
+    ax1.plot(
+        dmy_arr[ebbSign_depthAvg],
+        vel_arr[ebbSign_depthAvg],
+        "r.",
+        markersize=4,
+        label="Ebb",
+    )
+    ax1.axhline(0, color="k", linestyle="--", linewidth=0.8)
+
+    tick_dates = calculate_midnight_ticks(DMY, freq="7D")
+    ax1.set_xlim(tick_dates[0], tick_dates[-1])
+    ax1.xaxis.set_major_locator(FixedLocator(mdates.date2num(tick_dates)))
+    ax1.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d"))
+    ax1.minorticks_off()
+
+    ax1.set_ylabel("Signed Velocity (m/s)")
+    ax1.set_title(fig_title, fontweight="bold")
+    ax1.legend(loc="upper right", frameon=True, edgecolor="k")
+    ax1.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7)
+
+    # Second axis: histogram of flood vs ebb velocity distributions
+    ax2 = fig.add_subplot(212)
+    ax2.set_axisbelow(True)
+
+    vel_max = np.abs(vel_arr).max()
+    edges = np.linspace(-vel_max, vel_max, 30)
+
+    ax2.hist(
+        vel_arr[floodSign_depthAvg],
+        bins=edges,
+        color="b",
+        alpha=0.7,
+        label="Flood",
+        edgecolor="k",
+        linewidth=0.4,
+    )
+    ax2.hist(
+        vel_arr[ebbSign_depthAvg],
+        bins=edges,
+        color="r",
+        alpha=0.7,
+        label="Ebb",
+        edgecolor="k",
+        linewidth=0.4,
+    )
+
+    ax2.set_xlabel("Signed Velocity (m/s)")
+    ax2.set_ylabel("Frequency")
+    ax2.legend(loc="best", frameon=True, edgecolor="k")
+    ax2.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7)
+
+    plt.tight_layout()
+
+    plt.savefig(Path(mainOutputDir) / "_TidalCycles.png", bbox_inches="tight")
+    plt.close(fig)
+    print("fig6 (_TidalCycles.png) generated.")
 
 
 if __name__ == "__main__":
