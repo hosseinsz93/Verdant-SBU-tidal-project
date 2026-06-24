@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Union
+from typing import Union
 from collections.abc import Sequence
 import numpy as np
 from matplotlib import pyplot as plt
@@ -8,6 +8,12 @@ from matplotlib.ticker import FixedLocator
 from matio import load_from_mat
 import warnings
 import pandas as pd
+
+# Shared plot style constants
+GRID_STYLE = dict(linestyle="-", color="#E0E0E0", alpha=0.7)
+LEGEND_STYLE = dict(frameon=True, edgecolor="k")
+FLOOD_COLOR = "b"
+EBB_COLOR = "r"
 
 
 def flowVisualized(
@@ -73,7 +79,29 @@ def flowVisualized(
     )
 
 
-def calculate_midnight_ticks(DMY: Any, freq: str = "7D") -> pd.DatetimeIndex:
+def _dmy_label(DMY: Sequence[str]) -> str:
+    """Returns the common '(start to end)' date range label used in figure titles."""
+    return f"({DMY[0]} to {DMY[-1]})"
+
+
+def _apply_time_axis(
+    ax: plt.Axes,
+    DMY: Sequence[str],
+    fmt: str = "%m/%d %H:%M",
+    freq: str = "7D",
+) -> None:
+    """
+    Configures a matplotlib Axes with midnight-aligned x-ticks for time-series plots.
+    Shared across generate_figure2, generate_figure3, and generate_figure6.
+    """
+    tick_dates = calculate_midnight_ticks(DMY, freq=freq)
+    ax.set_xlim(tick_dates[0], tick_dates[-1])
+    ax.xaxis.set_major_locator(FixedLocator(mdates.date2num(tick_dates)))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter(fmt))
+    ax.minorticks_off()
+
+
+def calculate_midnight_ticks(DMY: Sequence[str], freq: str = "7D") -> pd.DatetimeIndex:
     """
     Generates tick dates fixed at 00:00 (midnight) from a list/numpy array of date strings (DMY).
     Ensures the first tick starts before or at the date start, and the last tick extends past the data end.
@@ -102,7 +130,8 @@ def generate_figure1(
     ebbMeanDir: float | int,
     siteID: str,
 ) -> None:
-    fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]})"
+    date_label = _dmy_label(DMY)
+    fig_title = f"{siteID} {date_label}"
     fig = plt.figure(num=fig_title, figsize=(1000.0, 450.0, "px"))  # type: ignore
 
     # Axis 1: Bar Chart
@@ -117,7 +146,7 @@ def generate_figure1(
     ax_bar.set_title(fig_title, fontweight="bold", fontsize=11)
     ax_bar.set_ylim(0, 0.6)
     ax_bar.set_axisbelow(True)
-    ax_bar.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7)
+    ax_bar.grid(True, **GRID_STYLE)
 
     # Axis 2: Polar Plot
     ax_polar = fig.add_axes((0.55, 0.1, 0.4, 0.8), polar=True)
@@ -127,14 +156,14 @@ def generate_figure1(
     floodRad = np.radians(floodMeanDir)
     ebbRad = np.radians(ebbMeanDir)
 
-    (line1,) = ax_polar.plot(
+    ax_polar.plot(
         [0, floodRad],
         [0, floodVelMag_depthtimeAvg],
         linewidth=2,
         color=[0.2, 0.4, 0.9],
         label="Flood",
     )
-    (line2,) = ax_polar.plot(
+    ax_polar.plot(
         [0, ebbRad],
         [0, ebbVelMag_depthtimeAvg],
         linewidth=2,
@@ -153,7 +182,7 @@ def generate_figure1(
     ax_polar.set_rlim(0, 0.6)  # type: ignore
     ax_polar.set_rticks([0.2, 0.4, 0.6])  # type: ignore
     ax_polar.set_rlabel_position(0)  # type: ignore
-    ax_polar.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7)
+    ax_polar.grid(True, **GRID_STYLE)
     ax_polar.text(
         floodRad - 0.06,
         floodVelMag_depthtimeAvg - 0.07,
@@ -171,7 +200,7 @@ def generate_figure1(
         ha="left",
     )
     ax_polar.set_title(
-        f"{siteID} ({DMY[0]} to {DMY[-1]}):\nDominant Current Directions (True North)",
+        f"{siteID} {date_label}:\nDominant Current Directions (True North)",
         pad=20,
         fontweight="bold",
     )
@@ -179,8 +208,7 @@ def generate_figure1(
         loc="upper center",
         bbox_to_anchor=(0.5, -0.07),
         ncol=1,
-        frameon=True,
-        edgecolor="k",
+        **LEGEND_STYLE,
     )
 
     plt.savefig(Path(mainOutputDir) / "_FlowSummary.png", bbox_inches="tight")
@@ -200,13 +228,14 @@ def generate_figure2(
     dmy_arr = pd.to_datetime(np.array(DMY)).to_numpy()
     vel_arr = np.array(velSigned_depthAvg)
 
-    fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}):\nTidal Flow Analysis: Flood (+) and Ebb (-) Tides"
+    fig_title = (
+        f"{siteID} {_dmy_label(DMY)}:\nTidal Flow Analysis: Flood (+) and Ebb (-) Tides"
+    )
     fig = plt.figure(num=fig_title, figsize=(1200.0, 600.0, "px"))  # type: ignore
 
     ax = fig.add_subplot(111)
 
     ax.plot(dmy_arr, vel_arr, "k", linewidth=0.5, label="Velocity")
-
     ax.plot(
         dmy_arr[floodSign_depthAvg],
         vel_arr[floodSign_depthAvg],
@@ -226,28 +255,21 @@ def generate_figure2(
     ax.set_ylabel("Velocity (m/s)")
     ax.set_title(fig_title, pad=15, fontweight="bold")
 
-    tick_dates = calculate_midnight_ticks(DMY, freq="7D")
-
-    ax.set_xlim(tick_dates[0], tick_dates[-1])
-
-    ax.xaxis.set_major_locator(FixedLocator(mdates.date2num(tick_dates)))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d %H:%M"))
-
-    ax.minorticks_off()
+    _apply_time_axis(ax, DMY)
     plt.setp(ax.get_xticklabels(), rotation=0, ha="center")
 
     ax.set_ylim(-1.5, 1.5)
     ax.set_yticks([-1.5, -1, -0.5, 0, 0.5, 1, 1.5])
 
-    ax.legend(loc="upper right", frameon=True, edgecolor="k")
-    ax.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7)
+    ax.legend(loc="upper right", **LEGEND_STYLE)
+    ax.grid(True, **GRID_STYLE)
 
     plt.savefig(Path(mainOutputDir) / "_TimeSeries.png", bbox_inches="tight")
     plt.close(fig)
     print("fig2 (_TimeSeries.png) generated.")
 
 
-# Figure 3: Velocity Components (_Componenets.png)
+# Figure 3: Velocity Components (_Components.png)
 def generate_figure3(
     mainOutputDir: Union[str, Path],
     DMY: Sequence[str],
@@ -259,7 +281,7 @@ def generate_figure3(
     east_arr = np.array(Eas_depthAvg)
     north_arr = np.array(Nor_depthAvg)
 
-    fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}): Velocity Components"
+    fig_title = f"{siteID} {_dmy_label(DMY)}: Velocity Components"
     fig = plt.figure(num=fig_title, figsize=(1200.0, 400.0, "px"))  # type: ignore
 
     ax = fig.add_subplot(111)
@@ -271,17 +293,10 @@ def generate_figure3(
     ax.set_ylabel("Velocity (m/s)")
     ax.set_title(fig_title, pad=15, fontweight="bold")
 
-    tick_dates = calculate_midnight_ticks(DMY, freq="7D")
+    _apply_time_axis(ax, DMY)
 
-    ax.set_xlim(tick_dates[0], tick_dates[-1])
-
-    ax.xaxis.set_major_locator(FixedLocator(mdates.date2num(tick_dates)))
-    ax.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d %H:%M"))
-
-    ax.minorticks_off()
-
-    ax.legend(loc="upper right", frameon=True, edgecolor="k")
-    ax.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7)
+    ax.legend(loc="upper right", **LEGEND_STYLE)
+    ax.grid(True, **GRID_STYLE)
 
     plt.savefig(Path(mainOutputDir) / "_Components.png", bbox_inches="tight")
     plt.close(fig)
@@ -301,16 +316,24 @@ def generate_figure4(
     flood_stats = vel_arr[floodSign_depthAvg]
     ebb_stats = vel_arr[ebbSign_depthAvg]
 
-    fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}): Statistical Analysis"
+    date_label = _dmy_label(DMY)
+    fig_title = f"{siteID} {date_label}: Statistical Analysis"
     fig = plt.figure(num=fig_title, figsize=(800.0, 600.0, "px"))  # type: ignore
 
     # Axis 1: Velocity Distribution
     ax1 = fig.add_subplot(211)
     ax1.set_axisbelow(True)
     ax1.hist(
-        flood_stats, bins=20, color="b", alpha=0.7, label="Flood Tide", edgecolor="k"
+        flood_stats,
+        bins=20,
+        color=FLOOD_COLOR,
+        alpha=0.7,
+        label="Flood Tide",
+        edgecolor="k",
     )
-    ax1.hist(ebb_stats, bins=20, color="r", alpha=0.7, label="Ebb Tide", edgecolor="k")
+    ax1.hist(
+        ebb_stats, bins=20, color=EBB_COLOR, alpha=0.7, label="Ebb Tide", edgecolor="k"
+    )
 
     ax1.set_xlim(-1.2, 1.2)
     ax1.set_xticks([-1, -0.5, 0, 0.5, 1])
@@ -318,12 +341,13 @@ def generate_figure4(
     ax1.set_yticks([0, 200, 400, 600, 800])
 
     ax1.set_title(
-        f"{siteID} ({DMY[0]} to {DMY[-1]}): Velocity Distribution by Tidal Phase", fontweight='bold'
+        f"{siteID} {date_label}: Velocity Distribution by Tidal Phase",
+        fontweight="bold",
     )
     ax1.set_xlabel("Velocity (m/s)")
     ax1.set_ylabel("Frequency")
-    ax1.legend(loc="best", frameon=True, edgecolor="k")
-    ax1.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7)
+    ax1.legend(loc="best", **LEGEND_STYLE)
+    ax1.grid(True, **GRID_STYLE)
 
     # Axis 2: Flood/Ebb Box Plots
     ax2 = fig.add_subplot(212)
@@ -332,18 +356,13 @@ def generate_figure4(
     ebb_magnitudes = np.abs(ebb_stats)
     box_data = [flood_stats, ebb_magnitudes]
 
-    box_props = dict(linestyle="-", linewidth=0.8, color="b")
-    whisker_props = dict(linestyle="--", linewidth=0.8, color="k")
-    capprops = dict(linestyle="-", linewidth=0.8, color="k")
-    median_props = dict(linestyle="-", linewidth=0.8, color="r")
-
     ax2.boxplot(
         box_data,
         whis=1.5,
-        boxprops=box_props,
-        whiskerprops=whisker_props,
-        capprops=capprops,
-        medianprops=median_props,
+        boxprops=dict(linestyle="-", linewidth=0.8, color=FLOOD_COLOR),
+        whiskerprops=dict(linestyle="--", linewidth=0.8, color="k"),
+        capprops=dict(linestyle="-", linewidth=0.8, color="k"),
+        medianprops=dict(linestyle="-", linewidth=0.8, color=EBB_COLOR),
         widths=0.25,
     )
 
@@ -354,10 +373,10 @@ def generate_figure4(
     ax2.set_yticks([-0.5, 0, 0.5, 1])
 
     ax2.set_title(
-        f"{siteID} ({DMY[0]} to {DMY[-1]}): Statistical Comparison of Flood and Ebb Magnitudes"
+        f"{siteID} {date_label}: Statistical Comparison of Flood and Ebb Magnitudes"
     )
     ax2.set_ylabel("Velocity Magnitude (m/s)")
-    ax2.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7)
+    ax2.grid(True, **GRID_STYLE)
 
     # Tight layout prevents subplots and titles from overlapping
     plt.tight_layout()
@@ -397,13 +416,13 @@ def generate_figure5(
     )
     counts = counts.T
 
-    fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}): Tidal Current Rose"
+    date_label = _dmy_label(DMY)
+    fig_title = f"{siteID} {date_label}: Tidal Current Rose"
     fig = plt.figure(num=fig_title, figsize=(7.0, 6.0), dpi=100)
 
     ax = fig.add_subplot(111, polar=True)
     ax.set_theta_zero_location("N")
     ax.set_theta_direction(-1)
-
     ax.set_axisbelow(True)
 
     bottoms_matrix = np.vstack((np.zeros(n_dir_bins), np.cumsum(counts, axis=0)[:-1]))
@@ -430,10 +449,10 @@ def generate_figure5(
     ax.set_rlabel_position(22.5)
     ax.tick_params(axis="y", labelsize=8)
 
-    ax.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7, zorder=1)
+    ax.grid(True, **GRID_STYLE, zorder=1)
 
     ax.set_title(
-        f"{siteID} ({DMY[0]} to {DMY[-1]}): Current Rose (True North)",
+        f"{siteID} {date_label}: Current Rose (True North)",
         pad=20,
         fontweight="bold",
         color="#222222",
@@ -465,7 +484,7 @@ def generate_figure6(
     dmy_arr = pd.to_datetime(np.array(DMY)).to_numpy()
     vel_arr = np.array(velSigned_depthAvg)
 
-    fig_title = f"{siteID} ({DMY[0]} to {DMY[-1]}): Tidal Cycles"
+    fig_title = f"{siteID} {_dmy_label(DMY)}: Tidal Cycles"
 
     fig = plt.figure(num=fig_title, figsize=(1200.0, 700.0, "px"))  # type: ignore
 
@@ -489,16 +508,12 @@ def generate_figure6(
     )
     ax1.axhline(0, color="k", linestyle="--", linewidth=0.8)
 
-    tick_dates = calculate_midnight_ticks(DMY, freq="7D")
-    ax1.set_xlim(tick_dates[0], tick_dates[-1])
-    ax1.xaxis.set_major_locator(FixedLocator(mdates.date2num(tick_dates)))
-    ax1.xaxis.set_major_formatter(mdates.DateFormatter("%m/%d"))
-    ax1.minorticks_off()
+    _apply_time_axis(ax1, DMY, fmt="%m/%d")
 
     ax1.set_ylabel("Signed Velocity (m/s)")
     ax1.set_title(fig_title, fontweight="bold")
-    ax1.legend(loc="upper right", frameon=True, edgecolor="k")
-    ax1.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7)
+    ax1.legend(loc="upper right", **LEGEND_STYLE)
+    ax1.grid(True, **GRID_STYLE)
 
     # Second axis: histogram of flood vs ebb velocity distributions
     ax2 = fig.add_subplot(212)
@@ -510,7 +525,7 @@ def generate_figure6(
     ax2.hist(
         vel_arr[floodSign_depthAvg],
         bins=edges,
-        color="b",
+        color=FLOOD_COLOR,
         alpha=0.7,
         label="Flood",
         edgecolor="k",
@@ -519,7 +534,7 @@ def generate_figure6(
     ax2.hist(
         vel_arr[ebbSign_depthAvg],
         bins=edges,
-        color="r",
+        color=EBB_COLOR,
         alpha=0.7,
         label="Ebb",
         edgecolor="k",
@@ -528,8 +543,8 @@ def generate_figure6(
 
     ax2.set_xlabel("Signed Velocity (m/s)")
     ax2.set_ylabel("Frequency")
-    ax2.legend(loc="best", frameon=True, edgecolor="k")
-    ax2.grid(True, linestyle="-", color="#E0E0E0", alpha=0.7)
+    ax2.legend(loc="best", **LEGEND_STYLE)
+    ax2.grid(True, **GRID_STYLE)
 
     plt.tight_layout()
 
