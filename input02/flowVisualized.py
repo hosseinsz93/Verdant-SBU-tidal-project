@@ -373,7 +373,7 @@ def generate_figure4(
     ax2.set_yticks([-0.5, 0, 0.5, 1])
 
     ax2.set_title(
-        f"{siteID} {date_label}: Statistical Comparison of Flood and Ebb Magnitudes"
+        f"{siteID} {date_label}: Statistical Comparison of Flood and Ebb Magnitudes", fontweight="bold"
     )
     ax2.set_ylabel("Velocity Magnitude (m/s)")
     ax2.grid(True, **GRID_STYLE)
