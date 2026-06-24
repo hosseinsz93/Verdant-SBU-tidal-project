@@ -318,7 +318,7 @@ def generate_figure4(
     ax1.set_yticks([0, 200, 400, 600, 800])
 
     ax1.set_title(
-        f"{siteID} ({DMY[0]} to {DMY[-1]}): Velocity Distribution by Tidal Phase"
+        f"{siteID} ({DMY[0]} to {DMY[-1]}): Velocity Distribution by Tidal Phase", fontweight='bold'
     )
     ax1.set_xlabel("Velocity (m/s)")
     ax1.set_ylabel("Frequency")
